@@ -10,7 +10,7 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 export default function MapBox() {
   const { view, network, line, setView } = useViewContext();
-  const { vehicles, traces, stops, loading, error } = useRegulation();
+  const { traces, stops } = useRegulation();
   
   const [loaded, setLoaded] = useState(false);
   const mapRef = useRef<MapRef>(null);
@@ -21,7 +21,7 @@ export default function MapBox() {
     zoom: 11,
   });
 
-  const [popupInfo, setPopupInfo] = useState<{ coordinates: [number, number], name: string } | null>(null);
+  const [popupInfo, setPopupInfo] = useState<{ coordinates: number[], name: string } | null>(null);
 
   const onLoad = () => {
     if (!mapRef.current) return;
@@ -37,7 +37,7 @@ export default function MapBox() {
 
     mapRef.current?.on('mouseenter', 'stops-layer', (e) => {
       mapRef.current!.getCanvas().style.cursor = 'pointer';
-      const coordinates = e.features?.[0]?.geometry?.coordinates as [number, number];
+      const coordinates = e.features?.[0]?.geometry?.bbox;
       const name = e.features?.[0]?.properties?.name;
       if (coordinates && name) {
         setPopupInfo({ coordinates, name });
@@ -53,10 +53,12 @@ export default function MapBox() {
       const stopId = e.features?.[0]?.properties?.id;
       if (stopId) {
         setView('stop', stopId);
-        mapRef.current?.flyTo({
-          center: [e.features?.[0]?.geometry?.coordinates[0], e.features?.[0]?.geometry?.coordinates[1]],
-          zoom: 19,
-        });
+        if (e.features?.[0]?.geometry?.bbox) {
+          mapRef.current?.flyTo({
+            center: [e.features[0].geometry.bbox[0], e.features[0].geometry.bbox[1]],
+            zoom: 19,
+          });
+        }
       }
     });
   };

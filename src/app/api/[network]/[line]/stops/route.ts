@@ -3,7 +3,7 @@
 import networks from "@/data/networks";
 import { NextRequest } from "next/server";
 import queries from "@/lib/overpass-queries";
-import { queryOverpass, osmToGeoJSON, OverpassResponse, findNode } from "@/lib/overpass";
+import { queryOverpass, findNode } from "@/lib/overpass";
 import { OverpassNode, OverpassRelation } from "overpass-ts";
 
 export interface Stop {

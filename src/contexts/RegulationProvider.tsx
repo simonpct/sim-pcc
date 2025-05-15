@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useViewContext } from "./ViewContext";
-import { Stop } from "@/app/api/[network]/[line]/stops/route";
 
-// Types inspirés du GTFS, mais génériques
 export interface Vehicle {
   id: string;
   label?: string;
@@ -14,10 +12,9 @@ export interface Vehicle {
   routeId?: string;
   tripId?: string;
   status?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-// Trace = géométrie de la ligne (GeoJSON)
 export type TraceGeoJSON = GeoJSON.Feature<GeoJSON.LineString> | GeoJSON.FeatureCollection<GeoJSON.LineString>;
 export type StopGeoJSON = GeoJSON.Feature<GeoJSON.Point> | GeoJSON.FeatureCollection<GeoJSON.Point>;
 
@@ -29,7 +26,7 @@ interface RegulationContextType {
   error: string | null;
   refresh: () => void;
   moveVehicle: (vehicleId: string, newPosition: { lat: number; lon: number }) => Promise<void>;
-  regulateVehicle: (vehicleId: string, action: string, payload?: any) => Promise<void>;
+  regulateVehicle: (vehicleId: string, action: string, payload?: unknown) => Promise<void>;
 }
 
 const RegulationContext = createContext<RegulationContextType | undefined>(undefined);
@@ -45,7 +42,7 @@ export const RegulationProvider = ({ children }: { children: ReactNode }) => {
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [traces, setTraces] = useState<TraceGeoJSON | null>(null);
-  const [stops, setStops] = useState<Stop[] | null>(null);
+  const [stops, setStops] = useState<StopGeoJSON | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,8 +57,8 @@ export const RegulationProvider = ({ children }: { children: ReactNode }) => {
       // On suppose que l'API retourne { vehicles: Vehicle[], traces: GeoJSON }
       setVehicles(data.vehicles || []);
       setTraces(data.traces || null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la récupération des traces");
     } finally {
       setLoading(false);
     }
@@ -69,10 +66,10 @@ export const RegulationProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await fetch(`/api/${network?.id}/${line?.id}/stops`);
       if (!res.ok) throw new Error("Erreur lors de la récupération des arrêts");
-      const data = await res.json();
+      const data = await res.json() as StopGeoJSON;
       setStops(data || null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la récupération des arrêts");
     } finally {
       setLoading(false);
     }
@@ -84,17 +81,17 @@ export const RegulationProvider = ({ children }: { children: ReactNode }) => {
   }, [network, line]);
 
   // Action de régulation générique (à adapter selon l'API backend)
-  const regulateVehicle = async (vehicleId: string, action: string, payload?: any) => {
+  const regulateVehicle = async (vehicleId: string, action: string, payload?: unknown) => {
     try {
-      await fetch(`/api/${network}/${line}/regulate`, {
+      await fetch(`/api/${network?.id}/${line?.id}/regulate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vehicleId, action, payload }),
       });
       // On peut rafraîchir les données après une action
       fetchData();
-    } catch (err) {
-      // Gérer l'erreur selon le besoin
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la régulation");
     }
   };
 
